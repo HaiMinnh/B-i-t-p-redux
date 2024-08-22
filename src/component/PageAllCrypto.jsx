@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react'
-import { Outlet } from 'react-router-dom'
+import { Outlet, useSearchParams } from 'react-router-dom'
 import axios from 'axios'
 import { Avatar, Button, List } from 'antd';
 import { addCoinAction } from '../redux/Reducers/coinReducer';
@@ -9,24 +9,38 @@ import { useDispatch } from 'react-redux';
 const PageAllCrypto = () => {
     const [arrCrypto, setArrCrypto] = useState([])
     const dispatch = useDispatch()
+    const [search, setSearch] = useSearchParams();
+    const searchTerm = search.get('search') || '';
+
+    const handleSearch = (value) => {
+        setSearch({ search: value });
+        console.log(value)
+    };
 
     const getAllCoinApi = async () => {
-        const res = await axios.get("https://api.coingecko.com/api/v3/coins/markets", {
-            params: {
-                vs_currency: "usd",
-                order: "market_cap_desc",
-                per_page: 50,
-                page: 1,
-                sparkline: false
-            }
-        });
-        console.log(res.data)
-        setArrCrypto(res.data)
-    }
+        try {
+            const res = await axios.get('https://api.coingecko.com/api/v3/coins/markets', {
+                params: {
+                    vs_currency: 'usd',
+                    order: 'market_cap_desc',
+                    per_page: 50,
+                    page: 1,
+                    sparkline: false,
+                },
+            });
+            setArrCrypto(res.data);
+        } catch (error) {
+            console.error('Error fetching data:', error);
+        }
+    };
 
     useEffect(() => {
         getAllCoinApi()
     }, [])
+
+    const filteredCoins = arrCrypto.filter((coin) =>
+        coin.id.toLowerCase().includes(searchTerm.toLowerCase())
+    )
 
     return (
         <div className='container mt-5'>
@@ -36,7 +50,8 @@ const PageAllCrypto = () => {
                         <h1>Crypto Portfolio</h1>
                     </div>
                     <div className="col-6">
-                        <input type="text" placeholder='search' className='form-control' />
+                        <input type="text" placeholder='search' className='form-control' value={searchTerm}
+                            onChange={(e) => handleSearch(e.target.value)} />
                     </div>
                 </div>
             </div>
@@ -46,7 +61,7 @@ const PageAllCrypto = () => {
                         <h3>All Cryptocurrencies</h3>
                         <List
                             itemLayout="horizontal"
-                            dataSource={arrCrypto}
+                            dataSource={filteredCoins}
                             renderItem={(item) => (
                                 <List.Item>
                                     <List.Item.Meta
@@ -55,11 +70,9 @@ const PageAllCrypto = () => {
                                         description={`USD ${item.current_price}`}
                                     />
                                     <Button type='primary' onClick={() => {
-                                        
-                                        console.log(item.id)
-                                        const action = addCoinAction({ ...item, quantity: 1 })
-                                        dispatch(action)
-                                    }} >
+                                        const action = addCoinAction({ ...item, quantity: 1 });
+                                        dispatch(action);
+                                    }}>
                                         Add to Favorites
                                     </Button>
                                 </List.Item>
